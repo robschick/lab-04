@@ -1,0 +1,291 @@
+---
+title: "R Basics"
+author: "Dr. Rob Schick"
+date: "10/27/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Some Basics
+In this section we'll look at a few new topics, as well as revisit some things that people had a hard time with in the Bahamas sonar stranding exercise. Let's start with the Bahamas
+
+## Recap from Class
+Here's how I put the data together. It's not necessarily right or wrong, but it minimizes the cutting and pasting of code. In general, that's a good tactic as it reduces the chances that errors or bugs creep into your code. Not also the use of `rep()` which is short for replicate. I use this a lot to build up vectors.
+
+```{r}
+ship_times = c(as.POSIXct(strptime("2000-03-15 07:00:00", "%Y-%m-%d %H:%M:%S"), tz = "GMT"),
+                             as.POSIXct(strptime("2000-03-15 09:00:00", "%Y-%m-%d %H:%M:%S"), tz = "GMT"),
+                             as.POSIXct(strptime("2000-03-15 11:00:00", "%Y-%m-%d %H:%M:%S"), tz = "GMT"),
+                             as.POSIXct(strptime("2000-03-15 12:30:00", "%Y-%m-%d %H:%M:%S"), tz = "GMT"),
+                             as.POSIXct(strptime("2000-03-15 14:30:00", "%Y-%m-%d %H:%M:%S"), tz = "GMT"),
+                             as.POSIXct(strptime("2000-03-15 16:30:00", "%Y-%m-%d %H:%M:%S"), tz = "GMT"))
+
+ship_time2 <- ship_times[1:5]
+
+ship_ID <- c(rep('Ship A', times = length(ship_times)),
+           rep('Ship B', times = length(ship_times)),
+           rep('Ship C', times = length(ship_time2)),
+           rep('Ship D', times = length(ship_times)))
+
+lon <- -1 * c(75 + 36/60, 76 + 50 / 60, 77 + 15/60, 77 + 30/60, 77 + 50/60, 78 + 13/60,
+              77 + 47.4/60, 78 + 12.7 / 60, 78 + 38.8/60, 78 + 34.2/60, 79 + 3.1/60, 79 + 22.7/60,
+              77 + 45/60, 78 + 04 / 60, 78 + 21/60, 78 + 19/60, 78 + 40/60, 
+              76 + 54.1/60, 77 + 08.3 / 60, 77 + 29.1/60, 77 + 46.5/60, 78 + 14.6/60, 78 + 31.4/60)
+
+lat <- c(26 + 13/60, 25 + 58/60, 25 + 31/60, 25 + 31/60, 26 + 05/60, 26 + 19/60,
+         26 + 02/60, 26 + 12/60, 26 + 14/60, 26 + 12/60, 26 + 22/60, 26 + 18/60,
+         25 + 58/60, 26 + 10/60, 26 + 09/60, 26 + 10/60, 26 + 13/60,
+         25 + 47.6/60, 25 + 44.7/60, 25 + 53/60, 26 + 8.9/60, 26 + 17.2/60, 26 + 7.1/60)
+
+frequency <- c(2.6, 2.6, 2.6, 3.3, 3.3, 3.3,
+               2.6, 2.6, 2.6, 2.6, 2.6, 2.6,
+               8.2, 7.5, 7.5, 7.5, 7.5,
+               6.8, 7.5, 7.5, 7.5, 7.5, 7.5)
+
+source_level <- c(235, 235, 235, 235, 235, 225,
+                  235, 235, 240, 240, 240, 235,
+                  226, 226, 226, 226, 226,
+                  226, 226, 226, 226, 226, 226)
+
+ships <- data.frame(ship_id = ship_ID,  
+                    time = c(ship_times, ship_times, ship_time2, ship_times),
+                    lon = lon,
+                    lat = lat,
+                    frequency = frequency,
+                    source_level = source_level)
+```
+
+### Reading in .csv Files
+Ok, building up anything besides a toy data base can be frustrating. What if we wanted to do the data entry in Excel? I've written a csv file that we can play around with to read in data. You can open it up in R with this code
+
+```{r}
+ships <- read_csv('ships.csv')
+```
+
+To read in the strandings data, what would you need to do?
+
+```{r}
+??? <- ???_???(???)
+```
+
+Now that we have two data frames, we can do some work on them. For `ships`, let's add a column that says which type of sonar the ship was using - SQS-53C or SQS-56. Fromm's report says Ships A and B were using 53C. Let's make the column and populate it with NA values. Then we'll use the logical evaluation to put in the value. I'll demonstrate for A & B, and you can complete it for C & D:
+
+```{r}
+ships$sonar_type <- NA
+ships
+ships[ships$ship_id == 'Ship A' | ships$ship_id == 'Ship B', 'sonar_type'] <- 'SQS-53C'
+ships
+```
+
+What the above logic says is as follows:
+1. Using the `ships` data frame
+2. Find all the rows where the value of `ship_id` is equal to 'Ship A' or where `ship_id` is equal to 'Ship B'
+3. For all of those rows, put the value of `SQS-53C` into the `sonar_type` column
+
+Always a good idea to look at what `ships` contains as you make changes so you can make sure what's happening is what you think should happen.
+
+Now, you try with the next two:
+
+```{r}
+
+```
+
+## Distances
+In your homework for the East Campus sounds, I'm going to ask you to derive information for the spatial distances from your location to two locations - one noisy and one quiet. While spatial distances often require the data to be projected, that concept is a bit beyond what we're trying to do here - get you somewhat familiar and comfortable with R. So we'll just calculate the Euclidean distance from each of the strandings to one of the ship locations. To do that, we need to latitude and longitude information. There is a canned way to do this in R; here's an example for one pair of locations:
+
+```{r}
+library(fields)
+rdist.earth.vec(as.matrix(cbind(strandings$lon[11], strandings$lat[11])), 
+                as.matrix(cbind(ships$lon[3], ships$lat[3])), miles = FALSE)
+```
+
+What if we wanted to calculate the distances for all pairs?
+```{r}
+rdist.earth.vec(as.matrix(cbind(strandings$lon, strandings$lat)), 
+                as.matrix(cbind(ships$lon[3], ships$lat[3])), miles = FALSE)
+```
+
+What would you do to get this into the strandings data frame as a column? What would you call the column?
+
+```{r}
+
+```
+
+
+### Euclidean Distance Function
+What if we wanted to build our own function. There's some trig involved (see [link here][https://conservationecology.wordpress.com/2013/06/30/distance-between-two-points-in-r/].)
+
+```{r}
+my.earth.dist <- function (long1, lat1, long2, lat2) {
+  rad <- pi/180
+  a1 <- lat1 * rad
+  a2 <- long1 * rad
+  b1 <- lat2 * rad
+  b2 <- long2 * rad
+  dlon <- b2 - a2
+  dlat <- b1 - a1
+  a <- (sin(dlat/2))^2 + cos(a1) * cos(b1) * (sin(dlon/2))^2
+  c <- 2 * atan2(sqrt(a), sqrt(1 - a))
+  R <- 6378.145
+  d <- R * c
+  return(d)
+}
+
+my.earth.dist(ships$lon[11], ships$lat[11], strandings$lon[11], strandings$lat[11])
+```
+
+How does that compare to the other function?
+
+```{r}
+rdist.earth.vec(as.matrix(cbind(strandings$lon[11], strandings$lat[11])), 
+                as.matrix(cbind(ships$lon[11], ships$lat[11])), miles = FALSE)
+```
+
+Pretty close!
+
+## R Intro
+In the feedback, people mentioned that they wanted to learn to get data into R in a different way. The method we used last time, writing the data from scratch is good when you have small datasets, but as you probably saw it gets a bit unwieldy when things start to get bigger. Also, if you cut and paste code, you can propagate errors and also forget to change variable names.
+
+(Note that I'm taking a lot of this from a data science course at Smith College - [link here][https://beanumber.github.io/sds192/lab-intro_to_r.html].)
+
+Above we read in from a file on our local machine, but can also reading in some data from the web:
+
+```{r}
+arbuthnot <- read_csv("http://www.openintro.org/stat/data/arbuthnot.csv")
+arbuthnot
+```
+
+Note that the `read_csv` file is in the R package/library called `readr,` which itself is part of the `tidyverse` package that we load up above in the initial code chunk. The `arbuthnot` data are:
+
+> The Arbuthnot data set refers to Dr. John Arbuthnot, an 18th century physician, writer, and mathematician. He was interested in the ratio of newborn boys to newborn girls, so he gathered the baptism records for children born in London for every year from 1629 to 1710. 
+
+So the key new function here is the `read_csv` function. With this you can more easily/readily do data entry in Excel or Google Sheets, and then import a csv. (n.b. there is a library called `googlesheets` that allows you to read directly from your google doc.)
+
+Recall that we can look at the size of the data set quickly with:
+
+```{r}
+dim(arbuthnot)
+```
+
+There are two other useful commands: `View()` and `str()`. Try them to see what you get.
+
+In terms of pulling out columns to look at, there are several ways to do this in R. The "base" R way of doing this, we've seen before:
+
+```{r, eval=FALSE}
+arbuthnot[, 2]
+```
+
+However, in recent years there has been a move towards what's known as the `tidyverse`, which is a slightly different, and its proponents would argue, more intuitive way of working with R. THe tidyverse approach is:
+
+```{r}
+pull(arbuthnot, boys)
+```
+
+How about a quick visualization? Always a good place to start. 
+
+```{r}
+qplot(data = arbuthnot, x = year, y = girls)
+```
+
+Cool, right?
+
+What if we wanted to find the total number of kids born each year? Well we'd add them together, but how?
+
+```{r}
+pull(arbuthnot, girls) + pull(arbuthnot, boys)
+```
+
+So that's interesting, but it would be better if these data were stored into the `arbuthnot` data frame. We can make it a vector like we did with latitudes and longitudes from last time, and then bind it to the data frame, or we can do this in one step:
+
+```{r}
+arbuthnot %>% 
+  mutate(total_kids = girls + boys) 
+arbuthnot
+```
+
+If we wanted to plot that new variable as a line, we would do this:
+
+```{r}
+qplot(x = year, y = total_kids, data = arbuthnot, geom = 'line')
+```
+
+How about if we wanted to calculate the ratio of girls to boys? I've put in part of the code, but left some for you to complete. Hint: you need to add an operation and a variable.
+
+```{r}
+arbuthnot %>% 
+  mutate(girl_boy_ratio = girls ???)
+```
+
+What about the proportion that are girls?
+
+```{r}
+??? %>%
+  mutate(girl_prop = ??? / ???)
+```
+
+Let's plot them as a line:
+
+```{r}
+???(x = year, y = ???, data = ???, geom = '???')
+```
+
+Let's find the years where there were more girls than boys. How would you do this? 
+
+Well, you could manually calculate it by substracting `boys` from `girls` and looking to see when the differences are positive. However, R allows you to make comparisons directly, and will return TRUE/FALSE values, e.g. 
+
+```{r}
+4 > 7
+4 < 7
+4 == 7
+```
+
+Armed with that complete this code:
+
+```{r}
+arbuthnot ???
+  mutate(more_girls = girls ??? boys)
+```
+
+One cool thing is that you can do some addition on logical vectors to tabulate the number of years in the dataset where girls outnumbered boys. Let's look at a toy vector to see this in action:
+
+```{r}
+logical_vec <- c(TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE)
+logical_vec
+```
+
+To summarize the number of trues:
+
+```{r}
+sum(logical_vec)
+```
+
+You can take advantage of this behavior to calculate a percentage:
+
+```{r}
+sum(logical_vec) / length(logical_vec) * 100
+```
+
+Armed with this knowledge, calculate the percentage of years where girls outnumbered boys.
+
+```{r}
+arbuthnot %>% 
+  mutate(more_girls = girls > boys) %>% 
+  summarise(pct = sum(more_girls) * 100)
+
+```
+Yikes - what happened in that data? Could it really be true that there were no years when girls outnumbered boys? Let's take a look at present day data.
+
+```{r}
+present <- read_csv("http://www.openintro.org/stat/data/present.csv")
+
+present <- present %>%
+  mutate(more_girls = girls > boys) %>% 
+  summarise(pct = sum(more_girls) * 100)
+
+qplot(x = year, y = boy_ratio, data = present, geom = "line")
+```
+
